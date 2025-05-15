@@ -10,6 +10,7 @@ import time
 import tempfile
 import wave
 import subprocess
+import llm as llm_module
 import faster_whisper as fw
 from dotenv import load_dotenv
 
@@ -17,7 +18,6 @@ from dotenv import load_dotenv
 # These will be conditionally imported when needed
 # to avoid errors if not installed
 REQUIRED_PACKAGES = {
-    "faster_whisper": "faster-whisper",
     "pyaudio": "pyaudio",
     "keyboard": "keyboard",
     "llm": "llm",
@@ -35,21 +35,6 @@ KURT_IP=os.getenv('KURT_IP')
 # disable insecure-HTTPS warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-def ensure_package(package_name):
-    """
-    Ensures a package is imported, prompts for installation if not available
-    """
-    try:
-        return __import__(package_name)
-    except ImportError:
-        pip_name = REQUIRED_PACKAGES.get(package_name, package_name)
-        click.echo(f"Required package '{pip_name}' is not installed.")
-        if click.confirm(f"Do you want to install {pip_name} now?", default=True):
-            subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name])
-            return __import__(package_name)
-        else:
-            click.echo(f"Cannot continue without {pip_name}.")
-            sys.exit(1)
 
 @click.group()
 def cli():
@@ -85,7 +70,7 @@ def listen_for_contact(model):
     number=select_number(transcription, addressbook)
     if number:
         click.echo(f'Calling {number}...')
-        call(number)
+        call(str(number))
     else:
         click.echo('No number found.')
     
@@ -122,8 +107,6 @@ def select_number(transcription, addressbook):
     
     try:
         # Import required packages
-        llm_module = ensure_package("llm")
-        lxml = ensure_package("lxml")
         
         from lxml import etree
         
@@ -237,8 +220,7 @@ def listen_macos(model):
     """
     try:
         # Dynamically import required packages
-        pyaudio = ensure_package("pyaudio")
-        fw = ensure_package("faster_whisper")
+        import pyaudio
         
         # For macOS, we'll use a different approach for key detection
         # that works better with the Core Audio framework
@@ -367,10 +349,9 @@ def listen_linux(model):
     then transcribe with faster-whisper model.
     """
     try:
+        import keyboard
         # Dynamically import required packages
-        pyaudio = ensure_package("pyaudio")
-        keyboard = ensure_package("keyboard")
-        fw = ensure_package("faster_whisper")
+        import pyaudio
         
         click.echo("Starting audio recording. Press any key to stop recording...")
         
