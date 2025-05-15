@@ -1,4 +1,9 @@
 click==8.2.0
+faster_whisper==1.1.1
+keyboard==0.13.5
+llm>=0.12.0
+lxml>=4.9.0
+pyaudio==0.2.14
 python-dotenv==1.1.0
 Requests==2.32.3
 urllib3==2.4.0
