@@ -3,6 +3,8 @@
 
 
 
+on macOS
+
 ```bash
 brew install portaudio
 ```

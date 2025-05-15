@@ -10,27 +10,16 @@ import time
 import tempfile
 import wave
 import subprocess
-import llm as llm_module
+import re
+import llm
 import faster_whisper as fw
 from dotenv import load_dotenv
-
-
-# These will be conditionally imported when needed
-# to avoid errors if not installed
-REQUIRED_PACKAGES = {
-    "pyaudio": "pyaudio",
-    "keyboard": "keyboard",
-    "llm": "llm",
-    "lxml": "lxml"
-}
-
 
 load_dotenv()
 PHONE_IP=os.getenv('PHONE_IP')
 PHONE_USER=os.getenv('PHONE_USER')
 PHONE_PASSWORD=os.getenv('PHONE_PASSWORD')
 KURT_IP=os.getenv('KURT_IP')
-
 
 # disable insecure-HTTPS warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -49,7 +38,7 @@ def call(number, verbose):
     Trigger a Yealink T31P outgoing call via its HTTP action URI.
     """
     #remove all non numeric characters
-    re.sub(r'[^0-9+]', '', number)
+    number = re.sub(r'[^0-9+]', '', number)
     url = f"https://{PHONE_IP}/servlet?key={number}"
     if verbose:
         click.echo(f'Calling {number} via {url}')
@@ -61,16 +50,18 @@ def call(number, verbose):
 
 @cli.command('listen')
 @click.option('--model', default='turbo', help='Whisper model to use for transcription')
-def listen_for_contact(model):
+@click.option('--verbose', is_flag=True, help='Show diagnostic information')
+def listen_for_contact(model,verbose):
     if platform.system() == 'Darwin':
         transcription=listen_macos(model)
     elif platform.system() == 'Linux':
         transcription=listen_linux(model)
-    addressbook=get_addressbook()
-    number=select_number(transcription, addressbook)
+    number=select_number(transcription)
+    print(number)
+    if verbose: click.echo(f'number: {number}')
     if number:
         click.echo(f'Calling {number}...')
-        call(str(number))
+        call(f"{number}")
     else:
         click.echo('No number found.')
     
@@ -89,8 +80,10 @@ def get_addressbook():
     except requests.RequestException as e:
         click.echo(f"Error fetching address book: {e}")
         return None
-    
-def select_number(transcription, addressbook):
+
+@cli.command('select')
+@click.argument('transcription')
+def select_number(transcription):
     """
     Use Gemma 2 2B model to analyze the transcription and select a phone number from the address book.
     
@@ -101,6 +94,7 @@ def select_number(transcription, addressbook):
     Returns:
         str: Selected phone number or None if no match is found
     """
+    addressbook = get_addressbook()
     if not transcription or not addressbook:
         click.echo("Missing transcription or address book data.")
         return None
@@ -155,9 +149,10 @@ Return ONLY the phone number to call, including country code. If no match is fou
         
         click.echo("Querying Gemma 2 2B model...")
         
-        # Call the Gemma 2 2B model using the llm package
+            # Call the Gemma 2 2B model using the llm package
         try:
-            response = llm_module.get("gemma2:2b").prompt(prompt)
+            # Using the correct llm API to access the Gemma model
+            response = llm.get_model("gemma3:12b").prompt(prompt)
             result = str(response).strip()
             click.echo(f"Model response: {result}")
             
