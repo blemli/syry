@@ -5,11 +5,6 @@ import requests
 import urllib3
 import os
 import platform
-import sys
-import time
-import tempfile
-import wave
-import subprocess
 import re
 import llm
 import faster_whisper as fw

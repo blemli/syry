@@ -1,4 +1,4 @@
-# syry (syry)
+# syry
 *call by voice, offline*
 
 

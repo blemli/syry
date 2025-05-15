@@ -1,3 +1,87 @@
+# Required imports
+import os
+import time
+import tempfile
+import wave
+import click
+import faster_whisper as fw
+
+# Global dictionary to store loaded models by name
+_loaded_whisper_models = {}
+
+def load_model_async(model_name, device=None, compute_type=None):
+    """
+    Load the model asynchronously in a separate thread.
+    This can be called at program startup to have the model ready when needed.
+    
+    Args:
+        model_name (str): The name of the whisper model to load
+        device (str): Device to use for inference ('cpu', 'cuda', 'auto')
+        compute_type (str): Compute type for inference
+    """
+    import threading
+    
+    def _load_in_background():
+        load_model(model_name, device=device, compute_type=compute_type)
+        click.echo("Model preloaded and ready for use!")
+    
+    thread = threading.Thread(target=_load_in_background)
+    thread.daemon = True
+    thread.start()
+    return thread
+
+def load_model(model_name, device=None, compute_type=None, cpu_threads=None, num_workers=2):
+    """
+    Preload the Whisper model to make subsequent transcriptions faster.
+    
+    Args:
+        model_name (str): The name of the whisper model to load (e.g., 'tiny', 'base', 'small', 'medium', 'large')
+        device (str): Device to use for inference ('cpu', 'cuda', 'auto'). Default is auto-detected.
+        compute_type (str): Compute type for inference ('float16', 'int8', 'int8_float16'). Default is based on device.
+        cpu_threads (int): Number of CPU threads to use (None = automatic)
+        num_workers (int): Number of workers for processing (more can be faster, default=2)
+        
+    Returns:
+        The loaded WhisperModel instance
+    """
+    global _loaded_whisper_models
+    
+    # Auto-detect best device if not specified
+    if device is None:
+        try:
+            import torch
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        except ImportError:
+            device = "cpu"
+    
+    # Choose optimal compute type based on device if not specified
+    if compute_type is None:
+        if device == "cuda":
+            compute_type = "float16"  # Better performance on GPU
+        else:
+            compute_type = "int8"  # Better performance on CPU
+    
+    # Generate a key for this specific model configuration
+    model_key = f"{model_name}_{device}_{compute_type}"
+    
+    if model_key not in _loaded_whisper_models:
+        click.echo(f"Loading faster-whisper {model_name} model on {device} using {compute_type}...")
+        start_time = time.time()
+        
+        model = fw.WhisperModel(
+            model_name, 
+            device=device, 
+            compute_type=compute_type, 
+            cpu_threads=8,
+            num_workers=num_workers
+        )
+        
+        load_time = time.time() - start_time
+        click.echo(f"Model loaded successfully in {load_time:.2f} seconds!")
+        _loaded_whisper_models[model_key] = model
+    
+    return _loaded_whisper_models[model_key]
+
 def listen_macos(model):
     """
     If platform is macOS: listen to the microphone until a key is pressed,
@@ -98,9 +182,14 @@ def listen_macos(model):
             
             click.echo(f"Audio saved. Transcribing with faster-whisper {model} model...")
             
-            # Load the model and transcribe
-            model_instance = fw.WhisperModel(model, device="cpu", compute_type="int8")
-            segments, info = model_instance.transcribe(temp_filename, beam_size=5)
+            # Use the preloaded model for transcription with optimized parameters
+            model_instance = load_model(model)
+            segments, info = model_instance.transcribe(
+                temp_filename, 
+                beam_size=3,  # Lower beam size for faster processing
+                vad_filter=True,  # Filter out non-speech
+                vad_parameters=dict(min_silence_duration_ms=500)  # Optimize VAD
+            )
             
             # Print transcription
             transcription = ""
@@ -227,9 +316,14 @@ def listen_linux(model):
             
             click.echo(f"Audio saved. Transcribing with faster-whisper {model} model...")
             
-            # Load the model and transcribe
-            model_instance = fw.WhisperModel(model, device="cpu", compute_type="int8")
-            segments, info = model_instance.transcribe(temp_filename, beam_size=5)
+            # Use the preloaded model for transcription with optimized parameters
+            model_instance = load_model(model)
+            segments, info = model_instance.transcribe(
+                temp_filename, 
+                beam_size=3,  # Lower beam size for faster processing
+                vad_filter=True,  # Filter out non-speech
+                vad_parameters=dict(min_silence_duration_ms=500)  # Optimize VAD
+            )
             
             # Print transcription
             transcription = ""
