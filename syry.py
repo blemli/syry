@@ -30,15 +30,23 @@ def cli():
     """Syry - Phone and audio utility tool"""
     pass
 
-@cli.command()
+@cli.command("call")
 @click.argument('number')
 @click.option('--verbose', is_flag=True, help='Show full HTTP response')
+def call_cli(number, verbose):
+    """
+    Command-line interface for calling a number.
+    This function triggers a call to the specified number using the Yealink T31P phone.
+    """
+    call(number, verbose)
+    
+    
 def call(number, verbose):
     """
     Trigger a Yealink T31P outgoing call via its HTTP action URI.
     """
     #remove all non numeric characters
-    number = re.sub(r'[^0-9+]', '', number)
+    number = re.sub(r'\D', '', number)
     url = f"https://{PHONE_IP}/servlet?key={number}"
     if verbose:
         click.echo(f'Calling {number} via {url}')
@@ -57,11 +65,11 @@ def listen_for_contact(model,verbose):
     elif platform.system() == 'Linux':
         transcription=listen_linux(model)
     number=select_number(transcription)
-    print(number)
     if verbose: click.echo(f'number: {number}')
     if number:
         click.echo(f'Calling {number}...')
-        call(f"{number}")
+        print(type(number))
+        call(number,verbose=verbose)
     else:
         click.echo('No number found.')
     
@@ -81,15 +89,36 @@ def get_addressbook():
         click.echo(f"Error fetching address book: {e}")
         return None
 
-@cli.command('select')
-@click.argument('transcription')
 def select_number(transcription):
     """
     Use Gemma 2 2B model to analyze the transcription and select a phone number from the address book.
     
     Args:
         transcription (str): The transcribed text from the user's speech
-        addressbook (str): XML string containing the phonebook data
+        
+    Returns:
+        str: Selected phone number or None if no match is found
+    """
+    return _select_number_impl(transcription)
+
+@cli.command('select')
+@click.argument('transcription')
+def select_number_cmd(transcription):
+    """
+    Command-line interface for select_number function.
+    Select a phone number from the address book based on transcription.
+    """
+    result = _select_number_impl(transcription)
+    if result:
+        click.echo(result)
+    return result
+
+def _select_number_impl(transcription):
+    """
+    Implementation of the number selection logic.
+    
+    Args:
+        transcription (str): The transcribed text from the user's speech
         
     Returns:
         str: Selected phone number or None if no match is found
@@ -101,7 +130,6 @@ def select_number(transcription):
     
     try:
         # Import required packages
-        
         from lxml import etree
         
         click.echo("Parsing address book...")
