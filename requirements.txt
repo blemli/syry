@@ -1,0 +1,4 @@
+click==8.2.0
+python-dotenv==1.1.0
+Requests==2.32.3
+urllib3==2.4.0
