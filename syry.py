@@ -11,6 +11,11 @@ import faster_whisper as fw
 from dotenv import load_dotenv
 from listen import listen_macos, listen_linux
 
+from lxml import etree
+from lxml import etree
+import re
+
+
 load_dotenv()
 PHONE_IP=os.getenv('PHONE_IP')
 PHONE_USER=os.getenv('PHONE_USER')
@@ -109,6 +114,30 @@ def select_number_cmd(transcription):
         click.echo(result)
     return result
 
+@cli.command('parse')
+def parse():
+    addressbook = get_addressbook()
+    extracted_names = extract_names(addressbook)
+    if extracted_names:
+        click.echo(f"Extracted names: {extracted_names}")
+
+
+def extract_names(addressbook):
+    """ parse the addressbook xml and extract a comma separated list of names
+    """
+    try:
+        root = etree.fromstring(addressbook.encode('utf-8'))
+        names = []
+        for entry in root.findall(".//DirectoryEntry"):
+            name_elem = entry.find("Name")
+            if name_elem is not None and name_elem.text:
+                names.append(name_elem.text.strip())
+        return ", ".join(names)
+    except Exception as e:
+        click.echo(f"Error parsing address book XML: {e}")
+        return None
+
+
 def _select_number_impl(transcription):
     """
     Implementation of the number selection logic.
@@ -126,7 +155,6 @@ def _select_number_impl(transcription):
     
     try:
         # Import required packages
-        from lxml import etree
         
         click.echo("Parsing address book...")
         # Parse the XML address book
@@ -181,7 +209,6 @@ Return ONLY the phone number to call, including country code. If no match is fou
             click.echo(f"Model response: {result}")
             
             # Process the response to extract a valid phone number
-            import re
             phone_match = re.search(r'[\+]?[0-9]{10,}', result)
             
             if phone_match:
