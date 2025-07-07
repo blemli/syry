@@ -46,6 +46,19 @@ def call(number, verbose):
     """
     Trigger a Yealink T31P outgoing call via its HTTP action URI.
     """
+    # Check if number contains letters (not just numbers and +)
+    if re.search(r'[a-zA-Z]', number):
+        if verbose:
+            click.echo(f'Input contains letters, selecting number for: {number}')
+        selected_number = select_number(number)
+        if selected_number:
+            number = selected_number
+            if verbose:
+                click.echo(f'Selected number: {number}')
+        else:
+            click.echo('No number found for the given input.')
+            return
+    
     #remove all non numeric characters
     number = re.sub(r'\D', '', number)
     url = f"https://{PHONE_IP}/servlet?key={number}"
