@@ -188,7 +188,8 @@ def listen_macos(model):
                 temp_filename, 
                 beam_size=3,  # Lower beam size for faster processing
                 vad_filter=True,  # Filter out non-speech
-                vad_parameters=dict(min_silence_duration_ms=500)  # Optimize VAD
+                vad_parameters=dict(min_silence_duration_ms=500),  # Optimize VAD
+                prompt="Select the correct name: "
             )
             
             # Print transcription
