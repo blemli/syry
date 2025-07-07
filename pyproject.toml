@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "syry"
+version = "0.0.1"
+description = "call by voice, offline"
+readme = "README.md"
+license = {text = "Unlicense"}
+authors = [
+    {name = "Stephan Graf", email = "stephan@problemli.ch"}
+]
+maintainers = [
+    {name = "Problemli GmbH"}
+]
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "License :: Public Domain",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications :: Telephony",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Environment :: Console",
+]
+keywords = ["voice", "phone", "call", "speech", "recognition", "offline"]
+
+dependencies = [
+    "click>=8.2.0",
+    "faster-whisper>=1.1.1",
+    "keyboard>=0.13.5",
+    "llm>=0.12.0",
+    "lxml>=4.9.0",
+    "pyaudio>=0.2.14",
+    "python-dotenv>=1.1.0",
+    "requests>=2.32.3",
+    "urllib3>=2.4.0",
+    "llm-ollama",
+]
+
+[project.urls]
+Homepage = "https://github.com/blemli/syry"
+Repository = "https://github.com/blemli/syry.git"
+Issues = "https://github.com/blemli/syry/issues"
+
+[project.scripts]
+syry = "syry:cli"
+
+[tool.setuptools]
+py-modules = ["syry", "listen"]
